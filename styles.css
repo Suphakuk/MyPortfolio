@@ -288,6 +288,21 @@ footer{width:min(1280px,92vw);margin:auto;padding:28px 0 35px;border-top:1px sol
   #home .home-dark-content .home-status{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.2);color:#f7f8fb}
   #home .home-dark-content .eyebrow{color:#e9ebef}
   #home .home-dark-content .hero-card{border:0;box-shadow:0 28px 70px rgba(0,0,0,.45)}
+  #home .home-dark-content .hero-card-main{
+    width:min(650px,49vw);
+    height:min(470px,53vh);
+    right:7%;
+    top:7%;
+    transform:rotate(2.2deg);
+  }
+  #home .home-dark-content .hero-card-small{
+    width:min(350px,27vw);
+    height:min(225px,25vh);
+    left:45%;
+    bottom:4%;
+    transform:rotate(-4deg);
+  }
+  #home .home-dark-content .hero-tag{right:7%;bottom:5%;z-index:5}
   #home .home-dark-content .hero-tag{background:#f7f8fb;color:#101217}
   #home .home-dark-content .marquee-wrap{background:rgba(7,9,13,.88);border-color:rgba(255,255,255,.16)}
   #home .home-dark-content .marquee-group{color:#f5f7fb}
