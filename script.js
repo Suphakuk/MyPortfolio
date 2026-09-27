@@ -11,14 +11,14 @@ const projectData = {
     title: "ระบบเติมเงินบัตรโรงอาหาร",
     description: "แพลตฟอร์มสำหรับผู้ใช้งานทั่วไป ร้านค้า และ Admin รองรับ Responsive Design ทั้ง Web Browser และมือถือ ช่วยให้การเติมเงินและจัดการข้อมูลทำได้สะดวกและรวดเร็ว",
     folder: "canteen",
-    count: 17
+    count: 18
   },
   fridge: {
     eyebrow: "PROJECT 03 / AI FOOD",
     title: "ระบบแนะนำเมนูอาหารจากรูปวัตถุดิบ",
     description: "Web Application ที่ผสานเทคโนโลยี AI เข้ากับ UX/UI เพื่อช่วยแก้ปัญหา Food Waste และอำนวยความสะดวกในการตัดสินใจเลือกเมนูอาหาร ตั้งแต่ User Flow ไปจนถึง Front-end ด้วย React.js",
     folder: "fridge",
-    count: 22
+    count: 26
   }
 };
 
