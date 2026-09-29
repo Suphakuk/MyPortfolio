@@ -30,13 +30,7 @@ const modalDescription = document.querySelector('#modalDescription');
 const modalCount = document.querySelector('#modalCount');
 
 // ---------- Project case studies ----------
-document.querySelectorAll('.project-card').forEach(card => {
-  card.addEventListener('click', () => openProject(card.dataset.project));
-  card.querySelector('.view-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    openProject(card.dataset.project);
-  });
-});
+const projectList = document.querySelector('#projectList');
 
 function openProject(key){
   const p = projectData[key];
@@ -66,8 +60,196 @@ function closeProject(){
   document.body.classList.remove('modal-open');
 }
 
+// Modal close controls.
 document.querySelector('.modal-close')?.addEventListener('click', closeProject);
 document.querySelector('.modal-backdrop')?.addEventListener('click', closeProject);
+
+// ---------- Projects carousel ----------
+const projectViewport = document.querySelector('#projectViewport');
+const projectCarousel = document.querySelector('#projectCarousel');
+const projectProgressBar = document.querySelector('#projectProgressBar');
+const projectSlideCount = document.querySelector('#projectSlideCount');
+const projectPrev = document.querySelector('.project-prev');
+const projectNext = document.querySelector('.project-next');
+const projectDots = [...document.querySelectorAll('#projectDots button')];
+
+if(projectViewport && projectList){
+  const originalCards = [...projectList.querySelectorAll('.project-card')];
+  const totalProjects = originalCards.length;
+  let autoTimer = null;
+  let isPointerDown = false;
+  let startX = 0;
+  let startScroll = 0;
+  let suppressClick = false;
+  let pressedCard = null;
+
+  originalCards.slice().reverse().forEach(card => {
+    const clone = card.cloneNode(true);
+    clone.classList.remove('reveal','show','is-active');
+    clone.classList.add('show');
+    projectList.insertBefore(clone, projectList.firstChild);
+  });
+  originalCards.forEach(card => {
+    const clone = card.cloneNode(true);
+    clone.classList.remove('reveal','show','is-active');
+    clone.classList.add('show');
+    projectList.appendChild(clone);
+  });
+
+  const allCards = [...projectList.querySelectorAll('.project-card')];
+  const middleStart = totalProjects;
+  const getGap = () => parseFloat(getComputedStyle(projectList).gap) || 0;
+  const getStep = () => (allCards[0]?.getBoundingClientRect().width || 0) + getGap();
+  const getCardCenterLeft = card => {
+    const viewportRect = projectViewport.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    return card.offsetLeft - (projectViewport.clientWidth - card.offsetWidth) / 2;
+  };
+  const setInitialPosition = () => {
+    const target = allCards[middleStart];
+    if(!target) return;
+    projectViewport.scrollLeft = getCardCenterLeft(target);
+    updateCarouselUI();
+  };
+  const getActivePhysicalIndex = () => {
+    const viewportCenter = projectViewport.scrollLeft + projectViewport.clientWidth / 2;
+    let best = middleStart, bestDistance = Infinity;
+    allCards.forEach((card, i) => {
+      const center = card.offsetLeft + card.offsetWidth / 2;
+      const distance = Math.abs(center - viewportCenter);
+      if(distance < bestDistance){ bestDistance = distance; best = i; }
+    });
+    return best;
+  };
+  const getLogicalIndex = () => {
+    const physical = getActivePhysicalIndex();
+    return ((physical - middleStart) % totalProjects + totalProjects) % totalProjects;
+  };
+  const updateActiveCard = () => {
+    const physical = getActivePhysicalIndex();
+    allCards.forEach((card, i) => card.classList.toggle('is-active', i === physical));
+    return physical;
+  };
+  const normalizeLoop = () => {
+    const physical = getActivePhysicalIndex();
+    if(physical < 1){
+      const target = allCards[physical + totalProjects];
+      if(target) projectViewport.scrollLeft = getCardCenterLeft(target);
+    } else if(physical >= middleStart + totalProjects + 1){
+      const target = allCards[physical - totalProjects];
+      if(target) projectViewport.scrollLeft = getCardCenterLeft(target);
+    }
+  };
+  const updateCarouselUI = () => {
+    const index = getLogicalIndex();
+    updateActiveCard();
+    if(projectSlideCount) projectSlideCount.textContent = `${String(index + 1).padStart(2,'0')} / ${String(totalProjects).padStart(2,'0')}`;
+    if(projectProgressBar) projectProgressBar.style.width = `${((index + 1) / totalProjects) * 100}%`;
+    projectDots.forEach((dot,i) => {
+      dot.classList.toggle('active', i === index);
+      dot.setAttribute('aria-current', i === index ? 'true' : 'false');
+    });
+  };
+  const goToPhysical = (physicalIndex, behavior='smooth') => {
+    const card = allCards[physicalIndex];
+    if(!card) return;
+    projectViewport.scrollTo({left:getCardCenterLeft(card), behavior});
+  };
+  const goTo = (logicalIndex, behavior='smooth') => {
+    const current = getActivePhysicalIndex();
+    const currentLogical = getLogicalIndex();
+    let target = middleStart + (((logicalIndex % totalProjects) + totalProjects) % totalProjects);
+    if(logicalIndex === currentLogical + 1) target = current + 1;
+    if(logicalIndex === currentLogical - 1) target = current - 1;
+    if(target < 1) target += totalProjects;
+    if(target >= allCards.length - 1) target -= totalProjects;
+    goToPhysical(target, behavior);
+  };
+  const nextProject = () => goTo(getLogicalIndex() + 1);
+  const prevProject = () => goTo(getLogicalIndex() - 1);
+
+  projectNext?.addEventListener('click', () => { nextProject(); restartAuto(); });
+  projectPrev?.addEventListener('click', () => { prevProject(); restartAuto(); });
+  projectDots.forEach(dot => dot.addEventListener('click', () => { goTo(Number(dot.dataset.slide)); restartAuto(); }));
+
+  let scrollTick = null;
+  projectViewport.addEventListener('scroll', () => {
+    if(scrollTick) return;
+    scrollTick = requestAnimationFrame(() => {
+      normalizeLoop();
+      updateCarouselUI();
+      scrollTick = null;
+    });
+  }, {passive:true});
+
+  projectViewport.addEventListener('pointerdown', e => {
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    pressedCard = e.target.closest('.project-card');
+    isPointerDown = true; suppressClick = false; startX = e.clientX; startScroll = projectViewport.scrollLeft;
+    projectViewport.classList.add('is-dragging');
+    // Do not capture the pointer: capturing it changes the eventual click target
+    // to the viewport, which can prevent project cards from opening their case study.
+    stopAuto();
+  });
+  projectViewport.addEventListener('pointermove', e => {
+    if(!isPointerDown) return;
+    if(Math.abs(e.clientX - startX) > 7) suppressClick = true;
+    projectViewport.scrollLeft = startScroll - (e.clientX - startX);
+  });
+  const endDrag = () => {
+    if(!isPointerDown) return;
+    isPointerDown = false; projectViewport.classList.remove('is-dragging');
+    const delta = projectViewport.scrollLeft - startScroll;
+    const wasDrag = Math.abs(delta) > 7 || suppressClick;
+    const direction = Math.abs(delta) > 45 ? (delta > 0 ? 1 : -1) : 0;
+    goToPhysical(getActivePhysicalIndex() + direction, 'smooth');
+    // Open the card on a genuine click/tap, even if the carousel moved the pointer.
+    if(!wasDrag && pressedCard) openProject(pressedCard.dataset.project);
+    pressedCard = null;
+    restartAuto();
+    setTimeout(() => { suppressClick = false; }, 80);
+  };
+  projectViewport.addEventListener('pointerup', endDrag);
+  projectViewport.addEventListener('pointercancel', endDrag);
+  projectViewport.addEventListener('click', e => {
+    if(suppressClick){ e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  // Keyboard activation for focused cards.
+  allCards.forEach(card => {
+    card.setAttribute('tabindex', '0');
+    card.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        openProject(card.dataset.project);
+      }
+    });
+  });
+
+  projectViewport.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight'){ e.preventDefault(); nextProject(); restartAuto(); }
+    if(e.key === 'ArrowLeft'){ e.preventDefault(); prevProject(); restartAuto(); }
+    if(e.key === 'Home'){ e.preventDefault(); goTo(0); restartAuto(); }
+    if(e.key === 'End'){ e.preventDefault(); goTo(totalProjects - 1); restartAuto(); }
+  });
+  projectCarousel?.addEventListener('mouseenter', stopAuto);
+  projectCarousel?.addEventListener('mouseleave', restartAuto);
+  projectCarousel?.addEventListener('focusin', stopAuto);
+  projectCarousel?.addEventListener('focusout', e => { if(!projectCarousel.contains(e.relatedTarget)) restartAuto(); });
+
+  function stopAuto(){ if(autoTimer) clearInterval(autoTimer); autoTimer = null; }
+  function restartAuto(){
+    stopAuto();
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    autoTimer = setInterval(nextProject, 4800);
+  }
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => goTo(getLogicalIndex(), 'auto'), 120);
+  });
+  requestAnimationFrame(() => requestAnimationFrame(() => { setInitialPosition(); restartAuto(); }));
+}
 
 // ---------- Scroll reveal ----------
 const observer = new IntersectionObserver(entries => {
