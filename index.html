@@ -81,7 +81,7 @@
           <div class="profile-orbit orbit-one"></div>
           <div class="profile-orbit orbit-two"></div>
           <div class="profile-photo-wrap">
-            <img src="assets/character.png" alt="Suphakon character portrait">
+            <img src="assets/contact-character.png" alt="Suphakon character portrait">
           </div>
           <p class="mini">SUPHAKON SUKDAMRONGSAK</p>
           <h3>UX/UI<br><span>DESIGNER</span></h3>
@@ -164,45 +164,79 @@
         <p class="section-note">Wireframes, high-fidelity UI, web applications and AI-assisted product design.</p>
       </div>
 
-      <div class="project-list">
-        <article class="project-card reveal" data-project="freeze">
-          <div class="project-number">01</div>
-          <div class="project-info">
-            <p class="mini">UX/UI · FIGMA</p>
-            <h3>Freeze: Website<br>Wireframe & Prototype</h3>
-            <p>ออกแบบโครงสร้างเว็บไซต์และ Interactive Prototype สำหรับแบรนด์ Freeze ด้วยแนวคิด Clean UI และโทนสีชมพูพาสเทล</p>
-            <button class="view-btn">VIEW CASE <span>↗</span></button>
-          </div>
-          <div class="project-preview">
-            <img src="assets/projects/freeze/freeze-01.png" alt="Freeze website project">
-          </div>
-        </article>
+      <div class="project-carousel" id="projectCarousel" aria-label="Selected projects carousel">
+        <div class="project-carousel-glow project-glow-one" aria-hidden="true"></div>
+        <div class="project-carousel-glow project-glow-two" aria-hidden="true"></div>
 
-        <article class="project-card alt reveal" data-project="canteen">
-          <div class="project-number">02</div>
-          <div class="project-info">
-            <p class="mini">UX/UI · WEB APP</p>
-            <h3>ระบบเติมเงิน<br>บัตรโรงอาหาร</h3>
-            <p>แพลตฟอร์มสำหรับผู้ใช้งาน ร้านค้า และ Admin พร้อม Responsive Design สำหรับ Web Browser และมือถือ</p>
-            <button class="view-btn">VIEW CASE <span>↗</span></button>
-          </div>
-          <div class="project-preview">
-            <img src="assets/projects/canteen/canteen-01.png" alt="Canteen top-up system project">
-          </div>
-        </article>
+        <button class="project-nav project-prev" type="button" aria-label="Previous project">←</button>
+        <div class="project-viewport" id="projectViewport" tabindex="0">
+          <div class="project-list" id="projectList">
+            <article class="project-card reveal" data-project="freeze">
+              <div class="project-card-media">
+                <img src="assets/projects/freeze/freeze-01.png" alt="Freeze website project">
+                <span class="project-number">01</span>
+                <span class="project-media-label">VIEW CASE <b>↗</b></span>
+              </div>
+              <div class="project-card-body">
+                <div class="project-card-meta">
+                  <p class="mini">UX/UI · FIGMA</p>
+                  <span>01 / 03</span>
+                </div>
+                <h3>Freeze: Website<br>Wireframe &amp; Prototype</h3>
+                <p>ออกแบบโครงสร้างเว็บไซต์และ Interactive Prototype สำหรับแบรนด์ Freeze ด้วยแนวคิด Clean UI และโทนสีชมพูพาสเทล</p>
+                <div class="project-card-foot"><span>CASE STUDY</span><i>↗</i></div>
+              </div>
+            </article>
 
-        <article class="project-card reveal" data-project="fridge">
-          <div class="project-number">03</div>
-          <div class="project-info">
-            <p class="mini">AI · UX/UI · REACT.JS</p>
-            <h3>ระบบแนะนำเมนูอาหาร<br>จากรูปวัตถุดิบ</h3>
-            <p>Web Application ที่ผสาน AI กับ UX/UI เพื่อช่วยตัดสินใจเลือกเมนูอาหารและลดปัญหา Food Waste</p>
-            <button class="view-btn">VIEW CASE <span>↗</span></button>
+            <article class="project-card project-card-dark reveal" data-project="canteen">
+              <div class="project-card-media">
+                <img src="assets/projects/canteen/canteen-01.png" alt="Canteen top-up system project">
+                <span class="project-number">02</span>
+                <span class="project-media-label">VIEW CASE <b>↗</b></span>
+              </div>
+              <div class="project-card-body">
+                <div class="project-card-meta">
+                  <p class="mini">UX/UI · WEB APP</p>
+                  <span>02 / 03</span>
+                </div>
+                <h3>ระบบเติมเงิน<br>บัตรโรงอาหาร</h3>
+                <p>แพลตฟอร์มสำหรับผู้ใช้งาน ร้านค้า และ Admin พร้อม Responsive Design สำหรับ Web Browser และมือถือ</p>
+                <div class="project-card-foot"><span>CASE STUDY</span><i>↗</i></div>
+              </div>
+            </article>
+
+            <article class="project-card reveal" data-project="fridge">
+              <div class="project-card-media">
+                <img src="assets/projects/fridge/fridge-11.png" alt="AI food recommendation project">
+                <span class="project-number">03</span>
+                <span class="project-media-label">VIEW CASE <b>↗</b></span>
+              </div>
+              <div class="project-card-body">
+                <div class="project-card-meta">
+                  <p class="mini">AI · UX/UI · REACT.JS</p>
+                  <span>03 / 03</span>
+                </div>
+                <h3>ระบบแนะนำเมนูอาหาร<br>จากรูปวัตถุดิบ</h3>
+                <p>Web Application ที่ผสาน AI กับ UX/UI เพื่อช่วยตัดสินใจเลือกเมนูอาหารและลดปัญหา Food Waste</p>
+                <div class="project-card-foot"><span>CASE STUDY</span><i>↗</i></div>
+              </div>
+            </article>
           </div>
-          <div class="project-preview">
-            <img src="assets/projects/fridge/fridge-11.png" alt="AI food recommendation project">
+        </div>
+        <button class="project-nav project-next" type="button" aria-label="Next project">→</button>
+
+        <div class="project-carousel-footer">
+          <div class="project-progress" aria-hidden="true"><span id="projectProgressBar"></span></div>
+          <div class="project-carousel-meta">
+            <span id="projectSlideCount">01 / 03</span>
+            <span>DRAG · SWIPE · AUTO</span>
           </div>
-        </article>
+        </div>
+        <div class="project-dots" id="projectDots" aria-label="Project slides">
+          <button type="button" data-slide="0" aria-label="Go to project 1"></button>
+          <button type="button" data-slide="1" aria-label="Go to project 2"></button>
+          <button type="button" data-slide="2" aria-label="Go to project 3"></button>
+        </div>
       </div>
     </section>
 
