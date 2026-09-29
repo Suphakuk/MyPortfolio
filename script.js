@@ -77,40 +77,41 @@ if(projectViewport && projectList){
   const originalCards = [...projectList.querySelectorAll('.project-card')];
   const totalProjects = originalCards.length;
   let autoTimer = null;
+  let normalizeTimer = null;
   let isPointerDown = false;
   let startX = 0;
   let startScroll = 0;
   let suppressClick = false;
   let pressedCard = null;
+  let isNormalizing = false;
 
-  originalCards.slice().reverse().forEach(card => {
-    const clone = card.cloneNode(true);
-    clone.classList.remove('reveal','show','is-active');
-    clone.classList.add('show');
-    projectList.insertBefore(clone, projectList.firstChild);
-  });
-  originalCards.forEach(card => {
-    const clone = card.cloneNode(true);
-    clone.classList.remove('reveal','show','is-active');
-    clone.classList.add('show');
-    projectList.appendChild(clone);
-  });
+  // Five copies give the carousel a large invisible buffer on both sides.
+  // We start in the middle copy and silently recenter only after a movement
+  // has finished. This prevents the visible "jump" at either end.
+  const copiesBefore = 2;
+  for(let copy=0; copy<copiesBefore; copy++){
+    originalCards.slice().reverse().forEach(card => {
+      const clone = card.cloneNode(true);
+      clone.classList.remove('reveal','show','is-active');
+      clone.classList.add('show');
+      projectList.insertBefore(clone, projectList.firstChild);
+    });
+  }
+  for(let copy=0; copy<2; copy++){
+    originalCards.forEach(card => {
+      const clone = card.cloneNode(true);
+      clone.classList.remove('reveal','show','is-active');
+      clone.classList.add('show');
+      projectList.appendChild(clone);
+    });
+  }
 
   const allCards = [...projectList.querySelectorAll('.project-card')];
-  const middleStart = totalProjects;
+  const middleStart = totalProjects * copiesBefore;
+  const middleEnd = middleStart + totalProjects;
   const getGap = () => parseFloat(getComputedStyle(projectList).gap) || 0;
-  const getStep = () => (allCards[0]?.getBoundingClientRect().width || 0) + getGap();
-  const getCardCenterLeft = card => {
-    const viewportRect = projectViewport.getBoundingClientRect();
-    const cardRect = card.getBoundingClientRect();
-    return card.offsetLeft - (projectViewport.clientWidth - card.offsetWidth) / 2;
-  };
-  const setInitialPosition = () => {
-    const target = allCards[middleStart];
-    if(!target) return;
-    projectViewport.scrollLeft = getCardCenterLeft(target);
-    updateCarouselUI();
-  };
+  const getCardCenterLeft = card => card.offsetLeft - (projectViewport.clientWidth - card.offsetWidth) / 2;
+
   const getActivePhysicalIndex = () => {
     const viewportCenter = projectViewport.scrollLeft + projectViewport.clientWidth / 2;
     let best = middleStart, bestDistance = Infinity;
@@ -121,27 +122,18 @@ if(projectViewport && projectList){
     });
     return best;
   };
-  const getLogicalIndex = () => {
-    const physical = getActivePhysicalIndex();
-    return ((physical - middleStart) % totalProjects + totalProjects) % totalProjects;
-  };
+
+  const physicalToLogical = physical =>
+    ((physical - middleStart) % totalProjects + totalProjects) % totalProjects;
+
   const updateActiveCard = () => {
     const physical = getActivePhysicalIndex();
     allCards.forEach((card, i) => card.classList.toggle('is-active', i === physical));
     return physical;
   };
-  const normalizeLoop = () => {
-    const physical = getActivePhysicalIndex();
-    if(physical < 1){
-      const target = allCards[physical + totalProjects];
-      if(target) projectViewport.scrollLeft = getCardCenterLeft(target);
-    } else if(physical >= middleStart + totalProjects + 1){
-      const target = allCards[physical - totalProjects];
-      if(target) projectViewport.scrollLeft = getCardCenterLeft(target);
-    }
-  };
+
   const updateCarouselUI = () => {
-    const index = getLogicalIndex();
+    const index = physicalToLogical(getActivePhysicalIndex());
     updateActiveCard();
     if(projectSlideCount) projectSlideCount.textContent = `${String(index + 1).padStart(2,'0')} / ${String(totalProjects).padStart(2,'0')}`;
     if(projectProgressBar) projectProgressBar.style.width = `${((index + 1) / totalProjects) * 100}%`;
@@ -150,21 +142,59 @@ if(projectViewport && projectList){
       dot.setAttribute('aria-current', i === index ? 'true' : 'false');
     });
   };
+
   const goToPhysical = (physicalIndex, behavior='smooth') => {
     const card = allCards[physicalIndex];
     if(!card) return;
     projectViewport.scrollTo({left:getCardCenterLeft(card), behavior});
   };
-  const goTo = (logicalIndex, behavior='smooth') => {
-    const current = getActivePhysicalIndex();
-    const currentLogical = getLogicalIndex();
-    let target = middleStart + (((logicalIndex % totalProjects) + totalProjects) % totalProjects);
-    if(logicalIndex === currentLogical + 1) target = current + 1;
-    if(logicalIndex === currentLogical - 1) target = current - 1;
-    if(target < 1) target += totalProjects;
-    if(target >= allCards.length - 1) target -= totalProjects;
-    goToPhysical(target, behavior);
+
+  // Recenter after motion is over. Because the target card has an identical
+  // copy in the middle, the user sees no discontinuity.
+  const normalizeLoop = () => {
+    if(isNormalizing || isPointerDown) return;
+    const physical = getActivePhysicalIndex();
+    if(physical < middleStart || physical >= middleEnd){
+      const logical = physicalToLogical(physical);
+      const target = middleStart + logical;
+      isNormalizing = true;
+      projectViewport.scrollLeft = getCardCenterLeft(allCards[target]);
+      isNormalizing = false;
+    }
+    updateCarouselUI();
   };
+
+  const scheduleNormalize = (delay=760) => {
+    clearTimeout(normalizeTimer);
+    normalizeTimer = setTimeout(normalizeLoop, delay);
+  };
+
+  const getLogicalIndex = () => physicalToLogical(getActivePhysicalIndex());
+
+  const goTo = (logicalIndex, behavior='smooth') => {
+    const currentPhysical = getActivePhysicalIndex();
+    const currentLogical = getLogicalIndex();
+    const direction = logicalIndex > currentLogical && logicalIndex - currentLogical > totalProjects/2 ? -1 :
+                      logicalIndex < currentLogical && currentLogical - logicalIndex > totalProjects/2 ? 1 :
+                      Math.sign(logicalIndex - currentLogical);
+    let target;
+
+    if(Math.abs(logicalIndex - currentLogical) <= 1){
+      target = currentPhysical + direction;
+    }else{
+      const logical = ((logicalIndex % totalProjects) + totalProjects) % totalProjects;
+      target = middleStart + logical;
+      // Prefer the nearest physical copy to keep the movement short.
+      const candidates = [logical, logical + totalProjects, logical + totalProjects*2, logical + totalProjects*3, logical + totalProjects*4];
+      target = candidates.map(i => ({i, d:Math.abs(i-currentPhysical)})).sort((a,b)=>a.d-b.d)[0].i;
+    }
+
+    // Keep at least one full copy on either side during normal navigation.
+    target = Math.max(1, Math.min(allCards.length-2, target));
+    goToPhysical(target, behavior);
+    scheduleNormalize(behavior === 'smooth' ? 780 : 30);
+  };
+
   const nextProject = () => goTo(getLogicalIndex() + 1);
   const prevProject = () => goTo(getLogicalIndex() - 1);
 
@@ -176,8 +206,10 @@ if(projectViewport && projectList){
   projectViewport.addEventListener('scroll', () => {
     if(scrollTick) return;
     scrollTick = requestAnimationFrame(() => {
-      normalizeLoop();
       updateCarouselUI();
+      // Never recenter while the browser is animating. That was the source of
+      // the visible snap/jitter in the previous version.
+      if(!isPointerDown) scheduleNormalize(820);
       scrollTick = null;
     });
   }, {passive:true});
@@ -185,25 +217,29 @@ if(projectViewport && projectList){
   projectViewport.addEventListener('pointerdown', e => {
     if(e.pointerType === 'mouse' && e.button !== 0) return;
     pressedCard = e.target.closest('.project-card');
-    isPointerDown = true; suppressClick = false; startX = e.clientX; startScroll = projectViewport.scrollLeft;
+    isPointerDown = true;
+    suppressClick = false;
+    startX = e.clientX;
+    startScroll = projectViewport.scrollLeft;
     projectViewport.classList.add('is-dragging');
-    // Do not capture the pointer: capturing it changes the eventual click target
-    // to the viewport, which can prevent project cards from opening their case study.
+    clearTimeout(normalizeTimer);
     stopAuto();
   });
+
   projectViewport.addEventListener('pointermove', e => {
     if(!isPointerDown) return;
     if(Math.abs(e.clientX - startX) > 7) suppressClick = true;
     projectViewport.scrollLeft = startScroll - (e.clientX - startX);
   });
+
   const endDrag = () => {
     if(!isPointerDown) return;
-    isPointerDown = false; projectViewport.classList.remove('is-dragging');
+    isPointerDown = false;
+    projectViewport.classList.remove('is-dragging');
     const delta = projectViewport.scrollLeft - startScroll;
     const wasDrag = Math.abs(delta) > 7 || suppressClick;
-    const direction = Math.abs(delta) > 45 ? (delta > 0 ? 1 : -1) : 0;
-    goToPhysical(getActivePhysicalIndex() + direction, 'smooth');
-    // Open the card on a genuine click/tap, even if the carousel moved the pointer.
+    goToPhysical(getActivePhysicalIndex(), 'smooth');
+    scheduleNormalize(820);
     if(!wasDrag && pressedCard) openProject(pressedCard.dataset.project);
     pressedCard = null;
     restartAuto();
@@ -215,7 +251,6 @@ if(projectViewport && projectList){
     if(suppressClick){ e.preventDefault(); e.stopPropagation(); }
   }, true);
 
-  // Keyboard activation for focused cards.
   allCards.forEach(card => {
     card.setAttribute('tabindex', '0');
     card.addEventListener('keydown', e => {
@@ -232,6 +267,7 @@ if(projectViewport && projectList){
     if(e.key === 'Home'){ e.preventDefault(); goTo(0); restartAuto(); }
     if(e.key === 'End'){ e.preventDefault(); goTo(totalProjects - 1); restartAuto(); }
   });
+
   projectCarousel?.addEventListener('mouseenter', stopAuto);
   projectCarousel?.addEventListener('mouseleave', restartAuto);
   projectCarousel?.addEventListener('focusin', stopAuto);
@@ -241,14 +277,31 @@ if(projectViewport && projectList){
   function restartAuto(){
     stopAuto();
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    autoTimer = setInterval(nextProject, 4800);
+    autoTimer = setInterval(nextProject, 5600);
   }
+
+  const setInitialPosition = () => {
+    const target = allCards[middleStart];
+    if(!target) return;
+    projectViewport.scrollLeft = getCardCenterLeft(target);
+    updateCarouselUI();
+  };
+
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => goTo(getLogicalIndex(), 'auto'), 120);
+    resizeTimer = setTimeout(() => {
+      const logical = getLogicalIndex();
+      const target = allCards[middleStart + logical];
+      if(target) projectViewport.scrollLeft = getCardCenterLeft(target);
+      updateCarouselUI();
+    }, 120);
   });
-  requestAnimationFrame(() => requestAnimationFrame(() => { setInitialPosition(); restartAuto(); }));
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    setInitialPosition();
+    restartAuto();
+  }));
 }
 
 // ---------- Scroll reveal ----------
